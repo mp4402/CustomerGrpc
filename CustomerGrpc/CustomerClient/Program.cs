@@ -61,7 +61,17 @@ namespace CustomerClient
 					line = Console.ReadLine();
 					DeletePrevConsoleLine();
 				}
-				await streaming.RequestStream.CompleteAsync();
+                await streaming.RequestStream.WriteAsync(new ChatMessage
+                {
+                    Color = customer.ColorInConsole,
+                    CustomerId = customer.Id,
+                    CustomerName = customer.Name,
+                    Message = line,
+                    RoomId = joinCustomerReply.RoomId
+                });
+                //line = Console.ReadLine();
+                //DeletePrevConsoleLine();
+                await streaming.RequestStream.CompleteAsync();
 			}
 			Console.WriteLine("Press any key to exit...");
 			Console.ReadKey();

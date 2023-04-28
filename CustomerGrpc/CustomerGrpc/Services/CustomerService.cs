@@ -47,9 +47,10 @@ namespace CustomerGrpc.Services
 					{
 						if (string.Equals(requestStream.Current.Message, "qw!", StringComparison.OrdinalIgnoreCase))
 						{
+                            _chatRoomService.DisconnectCustomer(requestStream.Current.RoomId, Guid.Parse(requestStream.Current.CustomerId));
 							break;
-						}
-						await _chatRoomService.BroadcastMessageAsync(requestStream.Current);
+                        }
+                        await _chatRoomService.BroadcastMessageAsync(requestStream.Current);
 					}
 				}
 			}
