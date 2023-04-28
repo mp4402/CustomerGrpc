@@ -13,67 +13,113 @@ namespace CustomerClient
 		{
 			AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
 
-			var customer = new Customer
+			if (args.Length > 2)
 			{
-				ColorInConsole = GetRandomChatColor(),
-				Id = Guid.NewGuid().ToString(),
-				Name = args.Length > 0 ? args[0] : "TheHulk"
-			};
-			
-			var channel = GrpcChannel.ForAddress("http://localhost:5001", new GrpcChannelOptions { Credentials = ChannelCredentials.Insecure });
-			var client = new CustomerService.CustomerServiceClient(channel);
-			var joinCustomerReply = await client.JoinCustomerChatAsync(new JoinCustomerRequest
-			{
-				Customer = customer 
-			});
-			
-			using (var streaming = client.SendMessageToChatRoom(new Metadata { new Metadata.Entry("CustomerName", customer.Name) }))
-			{
-				var response = Task.Run(async () =>
+                if (args[0].Equals("localhost") && args[1].Equals("5001"))
 				{
-					while (await streaming.ResponseStream.MoveNext())
-					{
-						Console.ForegroundColor = Enum.Parse<ConsoleColor>(streaming.ResponseStream.Current.Color);
-						Console.WriteLine($"{streaming.ResponseStream.Current.CustomerName}: {streaming.ResponseStream.Current.Message}");
-						Console.ForegroundColor = Enum.Parse<ConsoleColor>(customer.ColorInConsole);
-					}
-				});
-				
-				await streaming.RequestStream.WriteAsync(new ChatMessage
-				{
-					CustomerId = customer.Id, Color = customer.ColorInConsole, Message = "", RoomId = joinCustomerReply.RoomId, CustomerName = customer.Name
-				});
-				Console.ForegroundColor = Enum.Parse<ConsoleColor>(customer.ColorInConsole);
-				Console.WriteLine($"Joined the chat as {customer.Name}");
+                    var customer = new Customer
+                    {
+                        ColorInConsole = GetRandomChatColor(),
+                        Id = Guid.NewGuid().ToString(),
+                        Name = args[2]
+                    };
 
-				var line = Console.ReadLine();
-				DeletePrevConsoleLine();
-				while (!string.Equals(line, "qw!", StringComparison.OrdinalIgnoreCase))
-				{
-					await streaming.RequestStream.WriteAsync(new ChatMessage
+                    var channel = GrpcChannel.ForAddress("http://localhost:5001", new GrpcChannelOptions { Credentials = ChannelCredentials.Insecure });
+                    var client = new CustomerService.CustomerServiceClient(channel);
+                    var joinCustomerReply = await client.JoinCustomerChatAsync(new JoinCustomerRequest
+                    {
+                        Customer = customer
+                    });
+                    Console.WriteLine(joinCustomerReply.RoomId);
+					if (joinCustomerReply.RoomId !=  -1)
 					{
-						Color = customer.ColorInConsole,
-						CustomerId = customer.Id,
-						CustomerName = customer.Name,
-						Message = line,
-						RoomId = joinCustomerReply.RoomId
-					});
-					line = Console.ReadLine();
-					DeletePrevConsoleLine();
-				}
-                await streaming.RequestStream.WriteAsync(new ChatMessage
+                        using (var streaming = client.SendMessageToChatRoom(new Metadata { new Metadata.Entry("CustomerName", customer.Name) }))
+                        {
+                            var response = Task.Run(async () =>
+                            {
+                                while (await streaming.ResponseStream.MoveNext())
+                                {
+                                    Console.ForegroundColor = Enum.Parse<ConsoleColor>(streaming.ResponseStream.Current.Color);
+                                    Console.WriteLine($"{streaming.ResponseStream.Current.CustomerName}: {streaming.ResponseStream.Current.Message}");
+                                    Console.ForegroundColor = Enum.Parse<ConsoleColor>(customer.ColorInConsole);
+                                }
+                            });
+
+                            await streaming.RequestStream.WriteAsync(new ChatMessage
+                            {
+                                CustomerId = customer.Id,
+                                Color = customer.ColorInConsole,
+                                Message = "",
+                                RoomId = joinCustomerReply.RoomId,
+                                CustomerName = customer.Name,
+                            });
+                            Console.ForegroundColor = Enum.Parse<ConsoleColor>(customer.ColorInConsole);
+                            Console.WriteLine($"Joined the chat as {customer.Name}");
+                            string maquina_destino = "";
+                            string mensaje = "";
+                            int pos_espacio = 0;
+                            var line = Console.ReadLine();
+                            DeletePrevConsoleLine();
+                            while (!string.Equals(line.ToLower(), "quit", StringComparison.OrdinalIgnoreCase))
+                            {
+                                if (line.IndexOf("send",0,5) != -1)
+                                {
+                                    pos_espacio = line.IndexOf(" ", 5); // segundo espacio
+                                    maquina_destino = line.Substring(4, pos_espacio - 4).Trim();
+                                    mensaje = line.Substring(pos_espacio + 1);
+                                    if (maquina_destino != args[2])
+                                    {
+                                        await streaming.RequestStream.WriteAsync(new ChatMessage
+                                        {
+                                            Color = customer.ColorInConsole,
+                                            CustomerId = customer.Id,
+                                            CustomerName = customer.Name,
+                                            Message = mensaje,
+                                            RoomId = joinCustomerReply.RoomId,
+                                            CustomerDest = maquina_destino //Aqui debe ir el name del otro cliente
+                                        });
+                                    }
+                                    else
+                                    {
+                                        Console.WriteLine("No puede enviar mensaje a si mismo");
+                                    }
+                                    line = Console.ReadLine();
+                                    DeletePrevConsoleLine();
+                                }
+                                else
+                                {
+                                    Console.WriteLine("===========");
+                                    line = Console.ReadLine();
+                                    DeletePrevConsoleLine();
+                                }
+                            }
+                            await streaming.RequestStream.WriteAsync(new ChatMessage
+                            {
+                                Color = customer.ColorInConsole,
+                                CustomerId = customer.Id,
+                                CustomerName = customer.Name,
+                                Message = line,
+                                RoomId = joinCustomerReply.RoomId,
+                                CustomerDest = ""
+                            });
+                            //line = Console.ReadLine();
+                            //DeletePrevConsoleLine();
+                            await streaming.RequestStream.CompleteAsync();
+                        }
+                    }
+                    else
+                    {
+                        Console.WriteLine("Id invalido, ya existe");
+                    }
+
+                }
+                else
                 {
-                    Color = customer.ColorInConsole,
-                    CustomerId = customer.Id,
-                    CustomerName = customer.Name,
-                    Message = line,
-                    RoomId = joinCustomerReply.RoomId
-                });
-                //line = Console.ReadLine();
-                //DeletePrevConsoleLine();
-                await streaming.RequestStream.CompleteAsync();
-			}
-			Console.WriteLine("Press any key to exit...");
+                    Console.WriteLine("Debe de mandar como parámetros: [ipserver port id_maquina]");
+                }
+
+            }
+			Console.WriteLine("Has salido! Presione cualquier tecla para salir del programa");
 			Console.ReadKey();
 		}
 

@@ -45,7 +45,7 @@ namespace CustomerGrpc.Services
 				{
 					if (!string.IsNullOrEmpty(requestStream.Current.Message))
 					{
-						if (string.Equals(requestStream.Current.Message, "qw!", StringComparison.OrdinalIgnoreCase))
+						if (string.Equals(requestStream.Current.Message.ToLower(), "quit", StringComparison.OrdinalIgnoreCase))
 						{
                             _chatRoomService.DisconnectCustomer(requestStream.Current.RoomId, Guid.Parse(requestStream.Current.CustomerId));
 							break;
