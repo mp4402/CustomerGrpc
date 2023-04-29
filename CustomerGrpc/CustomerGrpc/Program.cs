@@ -13,7 +13,14 @@ namespace CustomerGrpc
 	{
 		public static void Main(string[] args)
 		{
-			CreateHostBuilder(args).Build().Run();
+			try
+			{
+                CreateHostBuilder(args).Build().Run();
+            }
+			catch (Exception)
+			{
+				Console.WriteLine("Puerto no valido / conexion erronea");
+			}
 		}
 
 		// Additional configuration is required to successfully run gRPC on macOS.
