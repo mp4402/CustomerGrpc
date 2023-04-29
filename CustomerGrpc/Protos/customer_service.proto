@@ -29,5 +29,6 @@ message ChatMessage {
   string color = 3;
   string customer_name = 5;
   string customer_dest = 6;
+  string messageTime = 7;
   int32 room_id = 4;
 }

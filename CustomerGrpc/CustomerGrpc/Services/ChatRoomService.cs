@@ -25,7 +25,7 @@ namespace CustomerGrpc.Services
 			{
 				if (message.CustomerDest.Equals(customer.Name))
 				{
-                    await customer.Stream.WriteAsync(message);
+					await customer.Stream.WriteAsync(message);
                     Console.WriteLine($"Sent message from {message.CustomerName} to {customer.Name}");
 					banderaEscrito = true;
 					break;

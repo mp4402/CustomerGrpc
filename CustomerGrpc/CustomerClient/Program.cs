@@ -15,7 +15,7 @@ namespace CustomerClient
 
 			if (args.Length > 2)
 			{
-                if (args[0].Equals("localhost") && args[1].Equals("5001"))
+                try
 				{
                     var customer = new Customer
                     {
@@ -23,16 +23,16 @@ namespace CustomerClient
                         Id = Guid.NewGuid().ToString(),
                         Name = args[2]
                     };
-
-                    var channel = GrpcChannel.ForAddress("http://localhost:5001", new GrpcChannelOptions { Credentials = ChannelCredentials.Insecure });
+                    string address = "http://" + args[0] + ":" + args[1];
+                    address = address.Trim();
+                    var channel = GrpcChannel.ForAddress(address, new GrpcChannelOptions { Credentials = ChannelCredentials.Insecure });
                     var client = new CustomerService.CustomerServiceClient(channel);
                     var joinCustomerReply = await client.JoinCustomerChatAsync(new JoinCustomerRequest
                     {
                         Customer = customer
                     });
-                    Console.WriteLine(joinCustomerReply.RoomId);
-					if (joinCustomerReply.RoomId !=  -1)
-					{
+                    if (joinCustomerReply.RoomId != -1)
+                    {
                         using (var streaming = client.SendMessageToChatRoom(new Metadata { new Metadata.Entry("CustomerName", customer.Name) }))
                         {
                             var response = Task.Run(async () =>
@@ -40,7 +40,8 @@ namespace CustomerClient
                                 while (await streaming.ResponseStream.MoveNext())
                                 {
                                     Console.ForegroundColor = Enum.Parse<ConsoleColor>(streaming.ResponseStream.Current.Color);
-                                    Console.WriteLine($"{streaming.ResponseStream.Current.CustomerName}: {streaming.ResponseStream.Current.Message}");
+                                    //Aqui se escribe el mensaje
+                                    Console.WriteLine($"{streaming.ResponseStream.Current.MessageTime} - {streaming.ResponseStream.Current.CustomerName}: {streaming.ResponseStream.Current.Message}");
                                     Console.ForegroundColor = Enum.Parse<ConsoleColor>(customer.ColorInConsole);
                                 }
                             });
@@ -58,15 +59,17 @@ namespace CustomerClient
                             string maquina_destino = "";
                             string mensaje = "";
                             int pos_espacio = 0;
+                            string messageTime;
                             var line = Console.ReadLine();
                             DeletePrevConsoleLine();
                             while (!string.Equals(line.ToLower(), "quit", StringComparison.OrdinalIgnoreCase))
                             {
-                                if (line.IndexOf("send",0,5) != -1)
+                                if (line.IndexOf("send", 0, 5) != -1)
                                 {
                                     pos_espacio = line.IndexOf(" ", 5); // segundo espacio
                                     maquina_destino = line.Substring(4, pos_espacio - 4).Trim();
                                     mensaje = line.Substring(pos_espacio + 1);
+                                    messageTime = DateTime.Now.ToString("HH:mm");
                                     if (maquina_destino != args[2])
                                     {
                                         await streaming.RequestStream.WriteAsync(new ChatMessage
@@ -76,7 +79,8 @@ namespace CustomerClient
                                             CustomerName = customer.Name,
                                             Message = mensaje,
                                             RoomId = joinCustomerReply.RoomId,
-                                            CustomerDest = maquina_destino //Aqui debe ir el name del otro cliente
+                                            CustomerDest = maquina_destino,
+                                            MessageTime = messageTime
                                         });
                                     }
                                     else
@@ -102,8 +106,6 @@ namespace CustomerClient
                                 RoomId = joinCustomerReply.RoomId,
                                 CustomerDest = ""
                             });
-                            //line = Console.ReadLine();
-                            //DeletePrevConsoleLine();
                             await streaming.RequestStream.CompleteAsync();
                         }
                     }
@@ -111,15 +113,19 @@ namespace CustomerClient
                     {
                         Console.WriteLine("Id invalido, ya existe");
                     }
-
                 }
-                else
+				catch (Exception)
                 {
-                    Console.WriteLine("Debe de mandar como parámetros: [ipserver port id_maquina]");
-                }
+                    Console.WriteLine("Direccion IP o puerto invalido");
+				}
+
 
             }
-			Console.WriteLine("Has salido! Presione cualquier tecla para salir del programa");
+            else
+            {
+                Console.WriteLine("Debe de mandar como parámetros: [ipserver port id_maquina]");
+            }
+            Console.WriteLine("Has salido! Presione cualquier tecla para salir del programa");
 			Console.ReadKey();
 		}
 

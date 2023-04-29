@@ -25,7 +25,7 @@ namespace CustomerGrpc
 					webBuilder.ConfigureKestrel(options =>
 					{
 						// Setup a HTTP/2 endpoint without TLS for OSX.
-						options.ListenLocalhost(5001, o => o.Protocols = HttpProtocols.Http2);
+						options.ListenLocalhost(Int32.Parse(args[0]), o => o.Protocols = HttpProtocols.Http2);
 					});
 					webBuilder.UseStartup<Startup>();
 				});
