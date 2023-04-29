@@ -125,9 +125,10 @@ namespace CustomerClient
             {
                 Console.WriteLine("Debe de mandar como parámetros: [ipserver port id_maquina]");
             }
-            Console.WriteLine("Has salido! Presione cualquier tecla para salir del programa");
-			Console.ReadKey();
-		}
+            Console.WriteLine("Presione cualquier tecla para salir del programa");
+            Console.ReadKey();
+            DeletePrevConsoleLine();
+        }
 
 		private static string GetRandomChatColor()
 		{
